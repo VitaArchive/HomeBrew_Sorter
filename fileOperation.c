@@ -130,7 +130,7 @@ int check(struct homebrew *HBlist, char* dir,int HBfound, int flag){
         }else if (FIO_S_ISREG(oneDir.d_stat.st_mode)){
             char ext[4];
             getExtension(fullName, ext, 3);
-            if ((!strncmp(dir, "ms0:/ISO/PSP",8) || !strncmp(dir, "ms0:/ISO",8)) && ((!strcasecmp(ext, "CSO") || !strcasecmp(ext, "ISO") || !strcasecmp(ext, "DAX") || !strcasecmp(ext, "ZSO")))){
+            if ((!strncmp(dir, "ms0:/ISO/PSP",8) || !strncmp(dir, "ms0:/ISO",8)) && ((!strcasecmp(ext, "CSO") || !strcasecmp(ext, "ISO") || !strcasecmp(ext, "DAX") || !strcasecmp(ext, "ZSO") || !strcasecmp(ext, "JSO")))){
                 strcpy(HBlist[HBfound].name, oneDir.d_name);
                 sceIoGetstat(fullName, &stats);
                 strcpy(HBlist[HBfound].path, fullName);
