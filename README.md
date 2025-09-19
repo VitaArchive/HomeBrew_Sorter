@@ -5,13 +5,14 @@
 ## Credits
 HomeBrew Sorter by Sakya\
 GUI & compatibility with game categories by Valantin and suloku\
-nuOSLibMOD V2 ([GitLab](https://gitlab.com/HaydenKow/nuoslibmod-v2))
+oslib ([GitHub](https://github.com/dogo/oslib))
 
 ## File extensions supported
-- ZSO
-- DAX
-- CSO
 - ISO
+- CSO
+- ZSO
+- JSO
+- DAX
 - PBP (EBOOT)
 
 ## Current detected paths
