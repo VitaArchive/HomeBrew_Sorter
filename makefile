@@ -6,10 +6,10 @@ BUILD_PRX = 1
 PSP_FW_VERSION=661
 
 #CFLAGS = -O3 -G0 -Wall
-CFLAGS = -O3 -frename-registers -G0 -Wall
+CFLAGS = -Os -frename-registers -G0 -Wall
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
 ASFLAGS = $(CFLAGS)
-LIBDIR =
+LIBDIR = ./oslib
 STDLIBS= -losl -lpng -lz \
          -lpsphprm -lpspsdk -lpspctrl -lpspumd -lpsprtc -lpsppower -lpspgu -lpspgum  -lpspaudiolib -lpspaudio -lpsphttp -lpspssl -lpspwlan \
          -lpspnet_adhocmatching -lpspnet_adhoc -lpspnet_adhocctl -lm -ljpeg

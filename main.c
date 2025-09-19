@@ -145,9 +145,9 @@ int mainMenu(){
 			oslDrawString(335,30,"Select/Release");
 			oslDrawImageXY(circle,305,50);
 			if(enable){
-				oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,100), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+				oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,100), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 				oslDrawString(335,50,"Hide icon0");
-                oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+                oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 			} else oslDrawString(335,50,"Show icon0");
 			oslDrawImageXY(startb,295,70);
 			oslDrawString(335,70,"Save List");
@@ -169,7 +169,7 @@ int mainMenu(){
             //Draw menu:
             for (i=first; i<=first+visible; i++){
                 if (i == selected){
-                    oslIntraFontSetStyle(pgfFont, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), INTRAFONT_ALIGN_LEFT);
+                    oslIntraFontSetStyle(pgfFont, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), 0.0, INTRAFONT_ALIGN_LEFT);
                     oslSetFont(pgfFont);
                     if(enable && !HBlist[i].type && !mode){
                         if(oldSelected != selected){
@@ -196,7 +196,7 @@ int mainMenu(){
 						}
                     }
                 }else{
-                    oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+                    oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
                     oslSetFont(pgfFont);
                 }
                 if(i<total){
@@ -215,14 +215,14 @@ int mainMenu(){
 					} else if(mode == 1){//CAT
 						//CAT
 						oslDrawImageXY(folder,12,start +(i - first)*oslGetImageHeight(folder));
-						oslIntraFontSetStyle(pgfFont, 0.5, RGBA(0,0,0,255), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+						oslIntraFontSetStyle(pgfFont, 0.5, RGBA(0,0,0,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 						oslSetFont(pgfFont);
 						oslDrawString(10+oslGetImageWidth(folder)/4,start +(i - first)*oslGetImageHeight(folder)+2, "C");
 						if (i == selected){
-							oslIntraFontSetStyle(pgfFont, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), INTRAFONT_ALIGN_LEFT);
+							oslIntraFontSetStyle(pgfFont, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), 0.0, INTRAFONT_ALIGN_LEFT);
 							oslSetFont(pgfFont);
 						}else{
-							oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+							oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 							oslSetFont(pgfFont);
 						}
 						if (CATlist[i].repeated){
@@ -234,7 +234,7 @@ int mainMenu(){
 					temp_name[0]='\0';
                 }
             }
-            oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+            oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
             oslSetFont(pgfFont);
 			// oslDrawString(30,256,"GUI & compatibility with game categories by Valantin and suloku");
 
@@ -350,15 +350,15 @@ int priorMenu(){
 			oslDrawString(335,30,"Enter Category");
 			oslDrawImageXY(circle,305,50);
 			if(enable){
-				oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,100), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+				oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,100), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 				oslDrawString(335,50,"Hide icon0");
-                oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+                oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 			} else oslDrawString(335,50,"Show icon0");
 			oslDrawImageXY(square,305,70);
 			if(browser_mode){
-				oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,100), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+				oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,100), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 				oslDrawString(335,70,"Disable browser mode");
-                oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+                oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 			} else oslDrawString(335,70,"Enable browser mode");
 			oslDrawImageXY(triangle,305,90);
 			oslDrawString(335,90,"View All");
@@ -377,7 +377,7 @@ int priorMenu(){
             for (i=first; i<=first+visible; i++){
 
                 if (i == selected && i != 0){
-                    oslIntraFontSetStyle(pgfFont, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), INTRAFONT_ALIGN_LEFT);
+                    oslIntraFontSetStyle(pgfFont, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), 0.0, INTRAFONT_ALIGN_LEFT);
                     oslSetFont(pgfFont);
                     if(enable){
                         if(oldSelected != selected){
@@ -394,21 +394,21 @@ int priorMenu(){
 						}
                     }
                 }else{
-                    oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+                    oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
                     oslSetFont(pgfFont);
                 }
 
                 if(i<total){
 						//CAT
 						oslDrawImageXY(folder,12,start +(i - first)*oslGetImageHeight(folder));
-						oslIntraFontSetStyle(pgfFont, 0.5, RGBA(0,0,0,255), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+						oslIntraFontSetStyle(pgfFont, 0.5, RGBA(0,0,0,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 						oslSetFont(pgfFont);
 						oslDrawString(10+oslGetImageWidth(folder)/4,start +(i - first)*oslGetImageHeight(folder)+2, "C");
 						if (i == selected){
-							oslIntraFontSetStyle(pgfFont, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), INTRAFONT_ALIGN_LEFT);
+							oslIntraFontSetStyle(pgfFont, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), 0.0, INTRAFONT_ALIGN_LEFT);
 							oslSetFont(pgfFont);
 						}else{
-							oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+							oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 							oslSetFont(pgfFont);
 						}
 						if (i == 0){
@@ -419,7 +419,7 @@ int priorMenu(){
 
                 }
             }
-            oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+            oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
             oslSetFont(pgfFont);
 			// oslDrawString(30,256,"GUI & compatibility with game categories by Valantin and suloku");
 
@@ -504,7 +504,7 @@ int initOSLib(){
     oslSetKeyAutorepeatInterval(10);
     oslIntraFontInit(INTRAFONT_CACHE_MED);
 	pgfFont = oslLoadFontFile("flash0:/font/ltn0.pgf");
-    oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), INTRAFONT_ALIGN_LEFT);
+    oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
     oslSetFont(pgfFont);
 	oslSetKeyAnalogToDPad(ANALOG_SENS);
     return 0;

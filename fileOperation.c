@@ -87,7 +87,7 @@ int check(struct homebrew *HBlist, char* dir,int HBfound, int flag){
             char check150[8] = "";
             for (j=0; j<7; j++)
                 check150[j] = oneDir.d_name[j];
-            if (!stricmp(check150, "__SCE__"))
+            if (!strcasecmp(check150, "__SCE__"))
                 continue;
             //check for 1.50 hb with folder%-folder style
             strcpy(old_format_style, fullName);
@@ -103,14 +103,14 @@ int check(struct homebrew *HBlist, char* dir,int HBfound, int flag){
             char checkCAT_[5] = "";
             for (j=0; j<4; j++)
                 checkCAT_[j] = oneDir.d_name[j];
-            if (!stricmp(checkCAT_, "CAT_")){
+            if (!strcasecmp(checkCAT_, "CAT_")){
                 if(flag) continue;
                 sceIoGetstat(fullName, &stats);
                 strcpy(CATlist[CATfound].name, oneDir.d_name);
                 strcpy(cur_cat, CATlist[CATfound].name+4);//hold current category name
                 strcpy(CATlist[CATfound].path, fullName);
-                CATlist[CATfound].dateModify = stats.st_mtime;
-                sprintf(CATlist[CATfound].dateForSort, "%4.4i%2.2i%2.2i%2.2i%2.2i%2.2i%6.6i", stats.st_mtime.year, stats.st_mtime.month, stats.st_mtime.day, stats.st_mtime.hour, stats.st_mtime.minute, stats.st_mtime.second, stats.st_mtime.microsecond);
+                CATlist[CATfound].dateModify = stats.sce_st_mtime;
+                sprintf(CATlist[CATfound].dateForSort, "%4.4i%2.2i%2.2i%2.2i%2.2i%2.2i%6.6i", stats.sce_st_mtime.year, stats.sce_st_mtime.month, stats.sce_st_mtime.day, stats.sce_st_mtime.hour, stats.sce_st_mtime.minute, stats.sce_st_mtime.second, stats.sce_st_mtime.microsecond);
                 CATfound++;
                 HBfound=check(HBlist,fullName,HBfound, 0);
                 strcpy(cur_cat, "Uncategorized");//asume uncategorized again
@@ -121,8 +121,8 @@ int check(struct homebrew *HBlist, char* dir,int HBfound, int flag){
                 sceIoGetstat(fullName, &stats);
                 strcpy(HBlist[HBfound].name, oneDir.d_name);
                 strcpy(HBlist[HBfound].path, fullName);
-                HBlist[HBfound].dateModify = stats.st_mtime;
-                sprintf(HBlist[HBfound].dateForSort, "%4.4i%2.2i%2.2i%2.2i%2.2i%2.2i%6.6i", stats.st_mtime.year, stats.st_mtime.month, stats.st_mtime.day, stats.st_mtime.hour, stats.st_mtime.minute, stats.st_mtime.second, stats.st_mtime.microsecond);
+                HBlist[HBfound].dateModify = stats.sce_st_mtime;
+                sprintf(HBlist[HBfound].dateForSort, "%4.4i%2.2i%2.2i%2.2i%2.2i%2.2i%6.6i", stats.sce_st_mtime.year, stats.sce_st_mtime.month, stats.sce_st_mtime.day, stats.sce_st_mtime.hour, stats.sce_st_mtime.minute, stats.sce_st_mtime.second, stats.sce_st_mtime.microsecond);
                 HBlist[HBfound].type=0;
                 strcpy(HBlist[HBfound].category, cur_cat);//this wouldn't work if there was a CAT_ dir inside a category...
                 HBfound++;
@@ -130,12 +130,12 @@ int check(struct homebrew *HBlist, char* dir,int HBfound, int flag){
         }else if (FIO_S_ISREG(oneDir.d_stat.st_mode)){
             char ext[4];
             getExtension(fullName, ext, 3);
-            if ((!strncmp(dir, "ms0:/ISO/PSP",8) || !strncmp(dir, "ms0:/ISO",8)) && ((!stricmp(ext, "CSO") || !stricmp(ext, "ISO") || !stricmp(ext, "DAX") || !stricmp(ext, "ZSO")))){
+            if ((!strncmp(dir, "ms0:/ISO/PSP",8) || !strncmp(dir, "ms0:/ISO",8)) && ((!strcasecmp(ext, "CSO") || !strcasecmp(ext, "ISO") || !strcasecmp(ext, "DAX") || !strcasecmp(ext, "ZSO")))){
                 strcpy(HBlist[HBfound].name, oneDir.d_name);
                 sceIoGetstat(fullName, &stats);
                 strcpy(HBlist[HBfound].path, fullName);
-                HBlist[HBfound].dateModify = stats.st_mtime;
-                sprintf(HBlist[HBfound].dateForSort, "%4.4i%2.2i%2.2i%2.2i%2.2i%2.2i%6.6i", stats.st_mtime.year, stats.st_mtime.month, stats.st_mtime.day, stats.st_mtime.hour, stats.st_mtime.minute, stats.st_mtime.second, stats.st_mtime.microsecond);
+                HBlist[HBfound].dateModify = stats.sce_st_mtime;
+                sprintf(HBlist[HBfound].dateForSort, "%4.4i%2.2i%2.2i%2.2i%2.2i%2.2i%6.6i", stats.sce_st_mtime.year, stats.sce_st_mtime.month, stats.sce_st_mtime.day, stats.sce_st_mtime.hour, stats.sce_st_mtime.minute, stats.sce_st_mtime.second, stats.sce_st_mtime.microsecond);
                 HBlist[HBfound].type=1;
                 strcpy(HBlist[HBfound].category, cur_cat);//this wouldn't work if there was a CAT_ dir inside a category...
                 HBfound++;
@@ -149,7 +149,7 @@ int check(struct homebrew *HBlist, char* dir,int HBfound, int flag){
 int getCATList(struct categories *CAT){
 	int i = 0;
     while (i < CATfound){
-        if (i == 0 || stricmp(CATlist[i-1].dateForSort, CATlist[i].dateForSort) >= 0)
+        if (i == 0 || strcasecmp(CATlist[i-1].dateForSort, CATlist[i].dateForSort) >= 0)
             i++;
         else{
             struct categories tmp = CATlist[i];
@@ -229,7 +229,7 @@ int getHBList(struct homebrew *HBlist, char *category, int flag){
     //Sort list:
     i = 0;
     while (i < HBfound){
-        if (i == 0 || stricmp(HBlist[i-1].dateForSort, HBlist[i].dateForSort) >= 0)
+        if (i == 0 || strcasecmp(HBlist[i-1].dateForSort, HBlist[i].dateForSort) >= 0)
             i++;
         else{
             struct homebrew tmp = HBlist[i];
@@ -284,8 +284,8 @@ int saveHBlist(struct homebrew *HBlist, int HBcount){
     stat.st_mode = 0777;
 
     for (i=HBcount - 1; i>=0; i--){
-        stat.st_mtime = start;
-        stat.st_ctime = start;
+        stat.sce_st_mtime = start;
+        stat.sce_st_ctime = start;
         sceIoChstat(HBlist[i].path, &stat, 0x1);
         sceIoChstat(HBlist[i].path, &stat, 0x20);
         sceIoChstat(HBlist[i].path, &stat, 0x8);
@@ -330,8 +330,8 @@ int saveHBlistBM(struct homebrew *HBlist, int HBcount){
     for (i=0; i<=HBcount - 1; i++){
 		strcpy(temp, HBlist[i].path);
 		strcat(temp, "/eboot.pbp");
-        stat.st_mtime = start;
-        stat.st_ctime = start;
+        stat.sce_st_mtime = start;
+        stat.sce_st_ctime = start;
         sceIoChstat(temp, &stat, 0x1);
         sceIoChstat(temp, &stat, 0x20);
         sceIoChstat(temp, &stat, 0x8);
@@ -390,8 +390,8 @@ int saveCATlist(struct categories *CATlist, int CATcount){
     stat.st_mode = 0777;
 
     for (i=CATcount - 1; i>=0; i--){
-        stat.st_mtime = start;
-        stat.st_ctime = start;
+        stat.sce_st_mtime = start;
+        stat.sce_st_ctime = start;
         sceIoChstat(CATlist[i].path, &stat, 0x1);
         sceIoChstat(CATlist[i].path, &stat, 0x20);
         sceIoChstat(CATlist[i].path, &stat, 0x8);
