@@ -7,6 +7,7 @@
 
 #include "media.h"
 #include "fileOperation.h"
+#include "isoreader.h"
 
 PSP_MODULE_INFO("HomebrewSorter", 0, 1, 0);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
@@ -121,6 +122,36 @@ static void getIcon0_fromfile(char* filename) {
 	sceIoClose(fd);
 }
 
+static void getIcon0_fromiso(char* filename) {
+	int res = isoOpen(filename);
+
+	if (res < 0) {
+		g_icon0 = oslLoadImageFilePNG("ram:/Media/icon0.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+		return;
+	}
+
+	u32 icon0_size = 0;
+	u32 lba = 0;
+	res = isoGetFileInfo("/PSP_GAME/ICON0.PNG", &icon0_size, &lba);
+
+	if (res < 0) {
+		g_icon0 = oslLoadImageFilePNG("ram:/Media/icon0.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+		isoClose();
+		return;
+	}
+
+	unsigned char icon[icon0_size];
+	if (icon0_size > 0) {
+		isoRead(icon, lba, 0 , icon0_size);
+		oslSetTempFileData(icon, icon0_size, &VF_MEMORY);
+		g_icon0 = oslLoadImageFilePNG(oslGetTempFileName(), OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+	} else {
+		g_icon0 = oslLoadImageFilePNG("ram:/Media/icon0.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+	}
+
+	isoClose();
+}
+
 /*  Main menu: */
 static int mainMenu() {
 	int mode = MODE_HOMEBREW;
@@ -185,13 +216,17 @@ static int mainMenu() {
 				if (i == selected) {
 					oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), 0.0, INTRAFONT_ALIGN_LEFT);
 					oslSetFont(g_pgf_font);
-					if (enable && !g_hb_list[i].type && !mode) {
+					if (enable && !mode) {
 						if (oldSelected != selected) {
 							if (g_icon0!=NULL) {
 								oslDeleteImage(g_icon0);
 							}
 							oldSelected = selected;
-							getIcon0(g_hb_list[i].path);
+							if (g_hb_list[i].type == HB_EBOOT) {
+								getIcon0(g_hb_list[i].path);
+							} else if (g_hb_list[i].type == HB_ISO) {
+								getIcon0_fromiso(g_hb_list[i].path);
+							}
 						}
 
 						if (g_icon0!=NULL) {
@@ -219,7 +254,7 @@ static int mainMenu() {
 
 				if (i < total) {
 					if (mode == MODE_HOMEBREW) {
-						if (g_hb_list[i].type == 0) {
+						if (g_hb_list[i].type == HB_EBOOT) {
 							oslDrawImageXY(g_folder,12,start +(i - first)*oslGetImageHeight(g_folder));
 						} else {
 							oslDrawImageXY(g_iso,12,start +(i - first)*oslGetImageHeight(g_folder));

@@ -13,7 +13,7 @@ static short int g_cat_found = 0;
 static Categories g_cat_list[MAX_CAT];
 
 // Hold current category
-static char g_cur_cat[262] = "Uncategorized";
+static char g_cur_cat[MAX_CAT_PATH] = "Uncategorized";
 
 /* Get extension of a file:*/
 static void getExtension(char *fileName, char *extension, int extMaxLength) {
@@ -37,7 +37,7 @@ static void getExtension(char *fileName, char *extension, int extMaxLength) {
 
 static int eboot_exists(char *path) {
 	//prepare path
-	char file[262];
+	char file[MAX_PATH];
 	if (path[strlen(path)-1] != '/') {
 		sprintf(file, "%s/%s", path, "eboot.pbp");
 	} else {
@@ -57,9 +57,9 @@ static int eboot_exists(char *path) {
 
 static int check(Homebrew *HBlist, char* dir,int HBfound, int flag) {
 	static SceIoDirent oneDir;
-	char fullName[262];
+	char fullName[MAX_PATH];
 	SceIoStat stats;
-	char old_format_style[262];// this will eventually hold a path to folder% to check if it exists
+	char old_format_style[MAX_PATH];// this will eventually hold a path to folder% to check if it exists
 	int uDir;
 	int oDir = sceIoDopen(dir);
 	if (oDir < 0) {
@@ -118,7 +118,7 @@ static int check(Homebrew *HBlist, char* dir,int HBfound, int flag) {
 				g_cat_list[g_cat_found].dateModify = stats.sce_st_mtime;
 				sprintf(g_cat_list[g_cat_found].dateForSort, "%4.4i%2.2i%2.2i%2.2i%2.2i%2.2i%6.6i", stats.sce_st_mtime.year, stats.sce_st_mtime.month, stats.sce_st_mtime.day, stats.sce_st_mtime.hour, stats.sce_st_mtime.minute, stats.sce_st_mtime.second, stats.sce_st_mtime.microsecond);
 				g_cat_found++;
-				HBfound=check(HBlist,fullName,HBfound, 0);
+				HBfound = check(HBlist,fullName,HBfound, 0);
 				strcpy(g_cur_cat, "Uncategorized");//asume uncategorized again
 				continue;
 			}
@@ -129,7 +129,7 @@ static int check(Homebrew *HBlist, char* dir,int HBfound, int flag) {
 				strcpy(HBlist[HBfound].path, fullName);
 				HBlist[HBfound].dateModify = stats.sce_st_mtime;
 				sprintf(HBlist[HBfound].dateForSort, "%4.4i%2.2i%2.2i%2.2i%2.2i%2.2i%6.6i", stats.sce_st_mtime.year, stats.sce_st_mtime.month, stats.sce_st_mtime.day, stats.sce_st_mtime.hour, stats.sce_st_mtime.minute, stats.sce_st_mtime.second, stats.sce_st_mtime.microsecond);
-				HBlist[HBfound].type=0;
+				HBlist[HBfound].type = HB_EBOOT;
 				strcpy(HBlist[HBfound].category, g_cur_cat);//this wouldn't work if there was a CAT_ dir inside a category...
 				HBfound++;
 			}
@@ -142,7 +142,7 @@ static int check(Homebrew *HBlist, char* dir,int HBfound, int flag) {
 				strcpy(HBlist[HBfound].path, fullName);
 				HBlist[HBfound].dateModify = stats.sce_st_mtime;
 				sprintf(HBlist[HBfound].dateForSort, "%4.4i%2.2i%2.2i%2.2i%2.2i%2.2i%6.6i", stats.sce_st_mtime.year, stats.sce_st_mtime.month, stats.sce_st_mtime.day, stats.sce_st_mtime.hour, stats.sce_st_mtime.minute, stats.sce_st_mtime.second, stats.sce_st_mtime.microsecond);
-				HBlist[HBfound].type=1;
+				HBlist[HBfound].type = HB_ISO;
 				strcpy(HBlist[HBfound].category, g_cur_cat);//this wouldn't work if there was a CAT_ dir inside a category...
 				HBfound++;
 			}
@@ -174,7 +174,7 @@ int checkCATList(Categories *CAT, Categories *CAT_norep) {
 	int i = 0;
 	int j = 0;
 	int count = 0;
-	char temp[262];
+	char temp[MAX_PATH];
 
 	for (i = 0; i < g_cat_found; i++) {
 		if (CAT[i].repeated) {
@@ -211,7 +211,7 @@ int getHBList(Homebrew *HBlist, char *category, int flag) {
 	int dirScanned = 0,
 	dirToScanNumber = 7,
 	HBfound = 0;
-	char dirToScan[dirToScanNumber][262];
+	char dirToScan[dirToScanNumber][MAX_PATH];
 	strcpy(dirToScan[0], "ms0:/PSP/GAME");
 	strcpy(dirToScan[1], "ms0:/PSP/GAME/PSX");
 	strcpy(dirToScan[2], "ms0:/PSP/GAME/Utility");
