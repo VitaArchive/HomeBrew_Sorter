@@ -1,221 +1,262 @@
-#include <pspkernel.h>
-//#include <pspctrl.h>
-//#include <pspdebug.h>
-#include <pspsdk.h>
 #include <time.h>
+
+#include <pspsdk.h>
+#include <pspkernel.h>
+
 #include <oslib/oslib.h>
-#include "fileOperation.h"
+
 #include "media.h"
-PSP_MODULE_INFO("homebrewSorter", 0, 1, 0);
+#include "fileOperation.h"
+
+PSP_MODULE_INFO("HomebrewSorter", 0, 1, 0);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
 PSP_HEAP_SIZE_KB(12*1024);
 
 #define ANALOG_SENS 40
-#define VERSION "2.0.0"
+
+enum HbSorterModes {
+	MODE_HOMEBREW = 0,
+	MODE_CATEGORIES = 1,
+};
 
 /* Globals: */
-int runningFlag = 1;
-struct homebrew HBlist[MAX_HB];
-int HBcount = 0;
-struct categories CATlist[MAX_CAT];
-struct categories CATlist_norep[MAX_CAT];
-int CATcount = 0;
-int CATcount_norep = 0;
-int browser_mode = 0;
-OSL_IMAGE *bkg,*startb,*cross,*circle,*square,*triangle,*folder,*iso,*icon0,*R,*L;
-OSL_FONT *pgfFont;
+static int g_running_flag = 1;
+static Homebrew g_hb_list[MAX_HB];
+static int g_hb_count = 0;
+static Categories g_cat_list[MAX_CAT];
+static Categories g_cat_list_norep[MAX_CAT];
+static int g_cat_count = 0;
+static int g_cat_count_norep = 0;
+static int g_is_browser_mode = 0;
 
-char temp_name[262];
+static OSL_IMAGE *g_bkg;
+static OSL_IMAGE *g_startb;
+static OSL_IMAGE *g_cross;
+static OSL_IMAGE *g_circle;
+static OSL_IMAGE *g_square;
+static OSL_IMAGE *g_triangle;
+static OSL_IMAGE *g_folder;
+static OSL_IMAGE *g_iso;
+static OSL_IMAGE *g_icon0;
+static OSL_IMAGE *g_R;
+static OSL_IMAGE *g_L;
+static OSL_FONT *g_pgf_font;
+
+static char g_temp_name[262];
 
 /* Draw toolbars: */
-char t[100];
-char hbfound[100];
-void drawToolbars(int mode) {
+static char g_toolbars[100];
+static char g_hbfound[100];
+
+static void drawToolbars(int mode) {
 	oslDrawFillRect(0,0,480,15,RGBA(0,0,0,170));
 	oslDrawString(5,0,"HomeBrew Sorter");
 	if (!mode) {
-		sprintf(hbfound,"HomeBrews found: %i", HBcount);
+		sprintf(g_hbfound,"HomeBrews found: %i", g_hb_count);
 	} else {
-		sprintf(hbfound,"                       ", HBcount);
+		sprintf(g_hbfound,"                       ");
 	}
-	oslDrawString(195,0,hbfound);
+	oslDrawString(195,0,g_hbfound);
 	//Current time:
 	struct tm * ptm;
 	time_t mytime;
 	time(&mytime);
 	ptm = localtime(&mytime);
-	sprintf(t,"%2.2d/%2.2d/%4.4d %2.2d:%2.2d",ptm->tm_mday, ptm->tm_mon + 1, ptm->tm_year + 1900, ptm->tm_hour,ptm->tm_min);
-	oslDrawString(360,0,t);
+	sprintf(g_toolbars,"%2.2d/%2.2d/%4.4d %2.2d:%2.2d",ptm->tm_mday, ptm->tm_mon + 1, ptm->tm_year + 1900, ptm->tm_hour,ptm->tm_min);
+	oslDrawString(360,0,g_toolbars);
 }
-void getIcon0(char* filename) {
+
+static void getIcon0(char* filename) {
 	//unsigned char _header[40];
 	int icon0Offset, icon1Offset;
 	char file[256];
 	sprintf(file,"%s/eboot.pbp",filename);
 	SceUID fd = sceIoOpen(file, 0x0001/*O_RDONLY*/, 0777);
+
 	if (fd < 0) {
-		icon0 = oslLoadImageFilePNG("ram:/Media/icon0.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+		g_icon0 = oslLoadImageFilePNG("ram:/Media/icon0.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
 		return;
 	}
+
 	sceIoLseek(fd, 12, SEEK_SET);
 	sceIoRead(fd, &icon0Offset, 4);
 	sceIoRead(fd, &icon1Offset, 4);
 	int icon0_size = icon1Offset - icon0Offset;
 	sceIoLseek(fd, icon0Offset, SEEK_SET);
 	unsigned char icon[icon0_size];
+
 	if (icon0_size) {
 		sceIoRead(fd, icon, icon0_size);
 		oslSetTempFileData(icon, icon0_size, &VF_MEMORY);
-		icon0 = oslLoadImageFilePNG(oslGetTempFileName(), OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+		g_icon0 = oslLoadImageFilePNG(oslGetTempFileName(), OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
 	} else {
-		icon0 = oslLoadImageFilePNG("ram:/Media/icon0.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+		g_icon0 = oslLoadImageFilePNG("ram:/Media/icon0.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
 	}
+
 	sceIoClose(fd);
 }
 
-void getIcon0_fromfile(char* filename) {
+static void getIcon0_fromfile(char* filename) {
 	char file[256];
 	SceOff icon0_size;
 
 	sprintf(file,"%s/icon0.png",filename);
 	SceUID fd = sceIoOpen(file, PSP_O_RDONLY, 0777);
+
 	if (fd < 0) {
-		icon0 = oslLoadImageFilePNG("ram:/Media/icon0.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+		g_icon0 = oslLoadImageFilePNG("ram:/Media/icon0.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
 		return;
 	}
+
 	icon0_size = sceIoLseek(fd, 0, SEEK_END);
 	sceIoLseek(fd, 0, SEEK_SET);
 	unsigned char icon[icon0_size];
 	if (icon0_size) {
 		sceIoRead(fd, icon, icon0_size);
 		oslSetTempFileData(icon, icon0_size, &VF_MEMORY);
-		icon0 = oslLoadImageFilePNG(oslGetTempFileName(), OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+		g_icon0 = oslLoadImageFilePNG(oslGetTempFileName(), OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
 	} else {
-		icon0 = oslLoadImageFilePNG("ram:/Media/icon0.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+		g_icon0 = oslLoadImageFilePNG("ram:/Media/icon0.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
 	}
 	sceIoClose(fd);
 }
 
 /*  Main menu: */
-int mainMenu() {
-	int mode = 0;//0 for hb, 1 for CAT
+static int mainMenu() {
+	int mode = MODE_HOMEBREW;
 	int skip = 0;
 	int start = 27;
 	int first = 0, catFirst =0, hbFirst =0;
-	int total = HBcount;
+	int total = g_hb_count;
 	int visible = 13;
-	int selected = 0,
-		catSelected=0,
-		hbSelected=0,
-		oldSelected=-1;
+	int selected = 0;
+	int catSelected=0;
+	int hbSelected=0;
+	int oldSelected=-1;
 	int i = 0;
 	int flag=0;
 	int enable = 1;
+
 	while (!osl_quit) {
 		if (!skip) {
 			oslStartDrawing();
-			oslDrawImageXY(bkg, 0, 0);
+			oslDrawImageXY(g_bkg, 0, 0);
 			drawToolbars(mode);
 			oslDrawFillRect(5,22,285,248,RGBA(0,0,0,170));
-			if (CATcount != 0) {
+			if (g_cat_count != 0) {
 				oslDrawFillRect(290,22,475,113,RGBA(0,0,0,170));
 			} else {
 				oslDrawFillRect(290,22,475,93,RGBA(0,0,0,170));
 			}
-			oslDrawImageXY(cross,305,30);
+			oslDrawImageXY(g_cross,305,30);
 			oslDrawString(335,30,"Select/Release");
-			oslDrawImageXY(circle,305,50);
+			oslDrawImageXY(g_circle,305,50);
+
 			if (enable) {
-				oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,100), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+				oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(255,255,255,100), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 				oslDrawString(335,50,"Hide icon0");
-				oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
-			} else oslDrawString(335,50,"Show icon0");
-			oslDrawImageXY(startb,295,70);
+				oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+			} else {
+				oslDrawString(335,50,"Show icon0");
+			}
+
+			oslDrawImageXY(g_startb,295,70);
 			oslDrawString(335,70,"Save List");
-			if (CATcount != 0) {
-				oslDrawImageXY(triangle,305,90);
+
+			if (g_cat_count != 0) {
+				oslDrawImageXY(g_triangle,305,90);
 				oslDrawString(335,90,"Return");
 			}
+
 			oslDrawFillRect(290,118,475,155,RGBA(0,0,0,170));
-			oslDrawImageXY(L,295,122);
+			oslDrawImageXY(g_L,295,122);
 			oslDrawString(350, 122, "Change view");
-			if (mode == 0) {
+
+			if (mode == MODE_HOMEBREW) {
 				oslDrawString(355, 135, "HomeBrew");
 			} else if (mode ==1) {
 				oslDrawString(355, 135, "Categories");
 			}
-			oslDrawImageXY(R,452,122);
+
+			oslDrawImageXY(g_R,452,122);
+
 			//Draw menu:
 			for (i=first; i<=first+visible; i++) {
 				if (i == selected) {
-					oslIntraFontSetStyle(pgfFont, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), 0.0, INTRAFONT_ALIGN_LEFT);
-					oslSetFont(pgfFont);
-					if (enable && !HBlist[i].type && !mode) {
+					oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), 0.0, INTRAFONT_ALIGN_LEFT);
+					oslSetFont(g_pgf_font);
+					if (enable && !g_hb_list[i].type && !mode) {
 						if (oldSelected != selected) {
-							if (icon0!=NULL) {
-								oslDeleteImage(icon0);
+							if (g_icon0!=NULL) {
+								oslDeleteImage(g_icon0);
 							}
 							oldSelected = selected;
-						getIcon0(HBlist[i].path);
+							getIcon0(g_hb_list[i].path);
 						}
-						if (icon0!=NULL)
+
+						if (g_icon0!=NULL) {
 							//oslDrawImageXY(icon0, 315,150);
-							oslDrawImageXY(icon0, 312,168);
-					}else if (enable && mode) {
+							oslDrawImageXY(g_icon0, 312,168);
+						}
+
+					} else if (enable && mode) {
 						if (oldSelected != selected) {
-							if (icon0!=NULL) {
-								oslDeleteImage(icon0);
+							if (g_icon0!=NULL) {
+								oslDeleteImage(g_icon0);
 							}
 							oldSelected = selected;
-							getIcon0_fromfile(CATlist[i].path);
+							getIcon0_fromfile(g_cat_list[i].path);
 						}
-						if (icon0!=NULL) {
-							oslDrawImageXY(icon0, 312,168);
+
+						if (g_icon0!=NULL) {
+							oslDrawImageXY(g_icon0, 312,168);
 						}
 					}
 				} else {
-					oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
-					oslSetFont(pgfFont);
+					oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+					oslSetFont(g_pgf_font);
 				}
-				if (i<total) {
-					// Homebrew
-					if (mode == 0) {
-						if (HBlist[i].type == 0) {
-							oslDrawImageXY(folder,12,start +(i - first)*oslGetImageHeight(folder));
-						} else {
-							oslDrawImageXY(iso,12,start +(i - first)*oslGetImageHeight(folder));
-						}
-						if (strcmp(HBlist[i].category, "Uncategorized") !=0) {
-							strcpy(temp_name, HBlist[i].category);
-							strcat(temp_name, ": ");
-						}
-						strcat(temp_name, HBlist[i].name);
-						oslDrawString(15+oslGetImageWidth(folder),start +(i - first)*oslGetImageHeight(folder), temp_name);//HBlist[i].name);
 
-					// CAT
-					} else if (mode == 1) {
-						oslDrawImageXY(folder,12,start +(i - first)*oslGetImageHeight(folder));
-						oslIntraFontSetStyle(pgfFont, 0.5, RGBA(0,0,0,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
-						oslSetFont(pgfFont);
-						oslDrawString(10+oslGetImageWidth(folder)/4,start +(i - first)*oslGetImageHeight(folder)+2, "C");
-						if (i == selected) {
-							oslIntraFontSetStyle(pgfFont, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), 0.0, INTRAFONT_ALIGN_LEFT);
-							oslSetFont(pgfFont);
+				if (i < total) {
+					if (mode == MODE_HOMEBREW) {
+						if (g_hb_list[i].type == 0) {
+							oslDrawImageXY(g_folder,12,start +(i - first)*oslGetImageHeight(g_folder));
 						} else {
-							oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
-							oslSetFont(pgfFont);
+							oslDrawImageXY(g_iso,12,start +(i - first)*oslGetImageHeight(g_folder));
 						}
-						if (CATlist[i].repeated) {
-							oslDrawString(15+oslGetImageWidth(folder),start +(i - first)*oslGetImageHeight(folder), CATlist[i].path);
+
+						if (strcmp(g_hb_list[i].category, "Uncategorized") != 0) {
+							strcpy(g_temp_name, g_hb_list[i].category);
+							strcat(g_temp_name, ": ");
+						}
+						strcat(g_temp_name, g_hb_list[i].name);
+						oslDrawString(15+oslGetImageWidth(g_folder),start +(i - first)*oslGetImageHeight(g_folder), g_temp_name);//HBlist[i].name);
+
+					} else if (mode == MODE_CATEGORIES) {
+						oslDrawImageXY(g_folder,12,start +(i - first)*oslGetImageHeight(g_folder));
+						oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(0,0,0,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+						oslSetFont(g_pgf_font);
+						oslDrawString(10+oslGetImageWidth(g_folder)/4,start +(i - first)*oslGetImageHeight(g_folder)+2, "C");
+
+						if (i == selected) {
+							oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), 0.0, INTRAFONT_ALIGN_LEFT);
+							oslSetFont(g_pgf_font);
 						} else {
-							oslDrawString(15+oslGetImageWidth(folder),start +(i - first)*oslGetImageHeight(folder), CATlist[i].name+4);
+							oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+							oslSetFont(g_pgf_font);
+						}
+
+						if (g_cat_list[i].repeated) {
+							oslDrawString(15+oslGetImageWidth(g_folder),start +(i - first)*oslGetImageHeight(g_folder), g_cat_list[i].path);
+						} else {
+							oslDrawString(15+oslGetImageWidth(g_folder),start +(i - first)*oslGetImageHeight(g_folder), g_cat_list[i].name+4);
 						}
 					}
-					temp_name[0]='\0';
+					g_temp_name[0]='\0';
 				}
 			}
-			oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
-			oslSetFont(pgfFont);
+			oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+			oslSetFont(g_pgf_font);
 
 			oslEndDrawing();
 		}
@@ -224,85 +265,80 @@ int mainMenu() {
 
 		oslReadKeys();
 		if (osl_keys->pressed.down) {
-			if (flag==0) {
-				if (selected < total - 1) {
-					if (++selected > first + visible) {
-						first++;
-					}
+			if (flag == 0 && selected < total - 1 ) {
+				if (++selected > first + visible) {
+					first++;
 				}
-			} else {
-				if (mode ==0) {
-					if (selected < HBcount - 1) {
-						moveHBdown(selected, HBlist);
-						if (++selected > first + visible) {
-							first++;
-						}
-					}
-				} else if (mode ==1) {
-					if (selected < CATcount - 1) {
-						moveCATdown(selected, CATlist);
-						if (++selected > first + visible) {
-							first++;
-						}
-					}
+
+			} else if (mode == MODE_HOMEBREW && selected < g_hb_count - 1) {
+				moveHBdown(selected, g_hb_list);
+				if (++selected > first + visible) {
+					first++;
+				}
+
+			} else if (mode == MODE_CATEGORIES && selected < g_cat_count - 1) {
+				moveCATdown(selected, g_cat_list);
+				if (++selected > first + visible) {
+					first++;
 				}
 			}
+
 		} else if (osl_keys->pressed.up) {
-			if (flag==0) {
-				if (selected > 0) {
-					if (--selected < first) {
-						first--;
-					}
+			if (flag == 0 && selected > 0) {
+				if (--selected < first) {
+					first--;
 				}
-			} else {
-				if (mode ==0) {
-					if (selected > 0) {
-						moveHBup(selected, HBlist);
-						if (--selected < first) {
-							first--;
-						}
-					}
-				} else if (mode ==1) {
-					if (selected > 0) {
-						moveCATup(selected, CATlist);
-						if (--selected < first) {
-							first--;
-						}
-					}
+
+			} else if (mode == MODE_HOMEBREW && selected > 0) {
+				moveHBup(selected, g_hb_list);
+				if (--selected < first) {
+					first--;
+				}
+
+			} else if (mode == MODE_CATEGORIES && selected > 0) {
+				moveCATup(selected, g_cat_list);
+				if (--selected < first) {
+					first--;
 				}
 			}
+
 		} else if (osl_keys->released.cross) {
 			flag ^= 1;
+
 		} else if (osl_keys->released.circle) {
 			enable ^= 1;
+
 		} else if (osl_keys->released.L || osl_keys->released.R) {
-			if (mode == 0) {
-				mode=1;
+			if (mode == MODE_HOMEBREW) {
+				mode = MODE_CATEGORIES;
 				hbSelected = selected;
 				selected = catSelected;
-				total = CATcount;
+				total = g_cat_count;
 				hbFirst = first;
 				first = catFirst;
-			} else if (mode == 1) {
-				mode=0;
+			} else if (mode == MODE_CATEGORIES) {
+				mode = MODE_HOMEBREW;
 				catSelected = selected;
 				selected = hbSelected;
-				total = HBcount;
+				total = g_hb_count;
 				catFirst = first;
 				first = hbFirst;
 			}
-			oldSelected=-1;
+			oldSelected = -1;
+
 		} else if (osl_keys->released.start) {
-			if (mode == 0) {
-				saveHBlist(HBlist, HBcount);
-				if (browser_mode) {
-					saveHBlistBM(HBlist, HBcount);
+			if (mode == MODE_HOMEBREW) {
+				saveHBlist(g_hb_list, g_hb_count);
+				if (g_is_browser_mode) {
+					saveHBlistBM(g_hb_list, g_hb_count);
 				}
-			} else if (mode == 1) {
-				saveCATlist(CATlist, CATcount);
+
+			} else if (mode == MODE_CATEGORIES) {
+				saveCATlist(g_cat_list, g_cat_count);
 			}
-		}else if (osl_keys->released.triangle) {
-			if (CATcount != 0) {
+
+		} else if (osl_keys->released.triangle) {
+			if (g_cat_count != 0) {
 				return 1;
 			}
 		}
@@ -311,90 +347,91 @@ int mainMenu() {
 }
 
 /*  Prior menu showing categories */
-int priorMenu() {
+static int priorMenu() {
 	int skip = 0;
 	int start = 27;
 	int first = 0;
-	int total = CATcount_norep+1;
+	int total = g_cat_count_norep+1;
 	int visible = 13;
 	int selected = 0;
 	int oldSelected = -1;
 	int i = 0;
 	int enable = 1;
+
 	while (!osl_quit) {
 		if (!skip) {
 			oslStartDrawing();
-			oslDrawImageXY(bkg, 0, 0);
+			oslDrawImageXY(g_bkg, 0, 0);
 			drawToolbars(1);
 			oslDrawFillRect(5,22,285,248,RGBA(0,0,0,170));
 			oslDrawFillRect(290,22,475,60+40+13,RGBA(0,0,0,170));
-			oslDrawImageXY(cross,305,30);
+			oslDrawImageXY(g_cross,305,30);
 			oslDrawString(335,30,"Enter Category");
-			oslDrawImageXY(circle,305,50);
+			oslDrawImageXY(g_circle,305,50);
 			if (enable) {
-				oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,100), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+				oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(255,255,255,100), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 				oslDrawString(335,50,"Hide icon0");
-				oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+				oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 			} else {
 				oslDrawString(335,50,"Show icon0");
 			}
-			oslDrawImageXY(square,305,70);
-			if (browser_mode) {
-				oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,100), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+			oslDrawImageXY(g_square,305,70);
+			if (g_is_browser_mode) {
+				oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(255,255,255,100), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 				oslDrawString(335,70,"Disable browser mode");
-				oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+				oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
 			} else {
 				oslDrawString(335,70,"Enable browser mode");
 			}
-			oslDrawImageXY(triangle,305,90);
+			oslDrawImageXY(g_triangle,305,90);
 			oslDrawString(335,90,"View All");
 
 			//Draw menu:
-			for (i=first; i<=first+visible; i++) {
+			for (i = first; i <= first+visible; i++) {
 				if (i == selected && i != 0) {
-					oslIntraFontSetStyle(pgfFont, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), 0.0, INTRAFONT_ALIGN_LEFT);
-					oslSetFont(pgfFont);
+					oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), 0.0, INTRAFONT_ALIGN_LEFT);
+					oslSetFont(g_pgf_font);
 					if (enable) {
 						if (oldSelected != selected) {
-							if (icon0!=NULL) {
-								oslDeleteImage(icon0);
+							if (g_icon0!=NULL) {
+								oslDeleteImage(g_icon0);
 							}
 							oldSelected = selected;
-							getIcon0_fromfile(CATlist_norep[i-1].path);
+							getIcon0_fromfile(g_cat_list_norep[i-1].path);
 						}
 
-						if (icon0!=NULL) {
-							oslDrawImageXY(icon0, 312,168);
+						if (g_icon0!=NULL) {
+							oslDrawImageXY(g_icon0, 312,168);
 						}
 					}
 				} else {
-					oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
-					oslSetFont(pgfFont);
+					oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+					oslSetFont(g_pgf_font);
 				}
 
 				//CAT
 				if (i < total) {
-					oslDrawImageXY(folder,12,start +(i - first)*oslGetImageHeight(folder));
-					oslIntraFontSetStyle(pgfFont, 0.5, RGBA(0,0,0,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
-					oslSetFont(pgfFont);
-					oslDrawString(10+oslGetImageWidth(folder)/4,start +(i - first)*oslGetImageHeight(folder)+2, "C");
+					oslDrawImageXY(g_folder,12,start +(i - first)*oslGetImageHeight(g_folder));
+					oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(0,0,0,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+					oslSetFont(g_pgf_font);
+					oslDrawString(10+oslGetImageWidth(g_folder)/4,start +(i - first)*oslGetImageHeight(g_folder)+2, "C");
 					if (i == selected) {
-						oslIntraFontSetStyle(pgfFont, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), 0.0, INTRAFONT_ALIGN_LEFT);
-						oslSetFont(pgfFont);
+						oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(20,20,20,255), RGBA(255,255,255,200), 0.0, INTRAFONT_ALIGN_LEFT);
+						oslSetFont(g_pgf_font);
 					} else {
-						oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
-						oslSetFont(pgfFont);
+						oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+						oslSetFont(g_pgf_font);
 					}
 					if (i == 0) {
-						oslDrawString(15+oslGetImageWidth(folder),start +(i - first)*oslGetImageHeight(folder), "Uncategorized");
+						oslDrawString(15+oslGetImageWidth(g_folder),start +(i - first)*oslGetImageHeight(g_folder), "Uncategorized");
 					} else {
-						oslDrawString(15+oslGetImageWidth(folder),start +(i - first)*oslGetImageHeight(folder), CATlist_norep[i-1].name+4);
+						oslDrawString(15+oslGetImageWidth(g_folder),start +(i - first)*oslGetImageHeight(g_folder), g_cat_list_norep[i-1].name+4);
 					}
 
 				}
 			}
-			oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
-			oslSetFont(pgfFont);
+			oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+			oslSetFont(g_pgf_font);
 
 			oslEndDrawing();
 		}
@@ -402,38 +439,38 @@ int priorMenu() {
 		skip = oslSyncFrame();
 
 		oslReadKeys();
-		if (osl_keys->pressed.down) {
-			if (selected < total - 1) {
-				if (++selected > first + visible) {
-					first++;
-				}
+		if (osl_keys->pressed.down && selected < total - 1) {
+			if (++selected > first + visible) {
+				first++;
 			}
 
-		} else if (osl_keys->pressed.up) {
-			if (selected > 0) {
-				if (--selected < first) {
-					first--;
-				}
+		} else if (osl_keys->pressed.up && selected > 0) {
+			if (--selected < first) {
+				first--;
 			}
 
 		} else if (osl_keys->released.cross) {
 			//If selected Uncategorized. Flag should only be 1 here
 			if (selected == 0) {
-				HBcount = getHBList(HBlist, "All", 1);
+				g_hb_count = getHBList(g_hb_list, "All", 1);
 			} else {
-				HBcount = getHBList(HBlist, CATlist_norep[selected-1].name, 0);
+				g_hb_count = getHBList(g_hb_list, g_cat_list_norep[selected-1].name, 0);
 			}
 			mainMenu();
-			HBcount = 0;
+			g_hb_count = 0;
 			oldSelected = -1;
+
 		} else if (osl_keys->released.circle) {
 			enable ^= 1;
+
 		} else if (osl_keys->released.square) {
-			browser_mode ^= 1;
+			g_is_browser_mode ^= 1;
+
 		} else if (osl_keys->released.triangle) {
-			HBcount = getHBList(HBlist, "All", 0);
+			g_hb_count = getHBList(g_hb_list, "All", 0);
 			mainMenu();
-			HBcount = 0;
+			g_hb_count = 0;
+
 		} else if (osl_keys->released.start) {
 
 		} else if (osl_keys->released.L || osl_keys->released.R) {
@@ -443,7 +480,7 @@ int priorMenu() {
 	return 0;
 }
 
-const OSL_VIRTUALFILENAME __image_ram_files[] = {
+static const OSL_VIRTUALFILENAME __image_ram_files[] = {
 	{"ram:/Media/bkg.png", (void*)bkg_png, size_bkg_png, &VF_MEMORY},
 	{"ram:/Media/start.png", (void*)start_png, size_start_png, &VF_MEMORY},
 	{"ram:/Media/cross.png", (void*)cross_png, size_cross_png, &VF_MEMORY},
@@ -457,29 +494,31 @@ const OSL_VIRTUALFILENAME __image_ram_files[] = {
 	{"ram:/Media/L.png", (void*)L_png, size_L_png, &VF_MEMORY}
 };
 
-int initOSLib() {
+static int initOSLib() {
 	oslInit(0);
 	oslInitGfx(OSL_PF_8888, 1);
 	oslInitAudio();
 	oslSetQuitOnLoadFailure(1);
 	oslAddVirtualFileList((OSL_VIRTUALFILENAME*)__image_ram_files, oslNumberof(__image_ram_files));
-	bkg = oslLoadImageFilePNG("ram:/Media/bkg.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
-	startb = oslLoadImageFilePNG("ram:/Media/start.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
-	cross = oslLoadImageFilePNG("ram:/Media/cross.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
-	circle = oslLoadImageFilePNG("ram:/Media/circle.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
-	square = oslLoadImageFilePNG("ram:/Media/square.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
-	triangle = oslLoadImageFilePNG("ram:/Media/triangle.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
-	folder = oslLoadImageFilePNG("ram:/Media/folder.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
-	iso = oslLoadImageFilePNG("ram:/Media/iso.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
-	R = oslLoadImageFilePNG("ram:/Media/R.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
-	L = oslLoadImageFilePNG("ram:/Media/L.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+	g_bkg = oslLoadImageFilePNG("ram:/Media/bkg.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+	g_startb = oslLoadImageFilePNG("ram:/Media/start.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+	g_cross = oslLoadImageFilePNG("ram:/Media/cross.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+	g_circle = oslLoadImageFilePNG("ram:/Media/circle.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+	g_square = oslLoadImageFilePNG("ram:/Media/square.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+	g_triangle = oslLoadImageFilePNG("ram:/Media/triangle.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+	g_folder = oslLoadImageFilePNG("ram:/Media/folder.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+	g_iso = oslLoadImageFilePNG("ram:/Media/iso.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+	g_R = oslLoadImageFilePNG("ram:/Media/R.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+	g_L = oslLoadImageFilePNG("ram:/Media/L.png", OSL_IN_RAM | OSL_SWIZZLED, OSL_PF_8888);
+
 	oslSetKeyAutorepeatInit(40);
 	oslSetKeyAutorepeatInterval(10);
 	oslIntraFontInit(INTRAFONT_CACHE_MED);
-	pgfFont = oslLoadFontFile("flash0:/font/ltn0.pgf");
-	oslIntraFontSetStyle(pgfFont, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
-	oslSetFont(pgfFont);
+	g_pgf_font = oslLoadFontFile("flash0:/font/ltn0.pgf");
+	oslIntraFontSetStyle(g_pgf_font, 0.5, RGBA(255,255,255,255), RGBA(0,0,0,0), 0.0, INTRAFONT_ALIGN_LEFT);
+	oslSetFont(g_pgf_font);
 	oslSetKeyAnalogToDPad(ANALOG_SENS);
+
 	return 0;
 }
 
@@ -487,15 +526,15 @@ int initOSLib() {
 int main() {
 	initOSLib();
 	tzset();
-	HBcount = getHBList(HBlist, "All", 0);
-	CATcount = getCATList(CATlist);
-	CATcount_norep = checkCATList(CATlist, CATlist_norep);
+	g_hb_count = getHBList(g_hb_list, "All", 0);
+	g_cat_count = getCATList(g_cat_list);
+	g_cat_count_norep = checkCATList(g_cat_list, g_cat_list_norep);
 
-	printf("ci arrivo?\n");
-	if (CATcount == 0) {
+	// printf("ci arrivo?\n");
+	if (g_cat_count == 0) {
 		mainMenu();
 	} else {
-		HBcount = 0;
+		g_hb_count = 0;
 		priorMenu();
 	}
 
