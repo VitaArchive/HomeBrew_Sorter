@@ -18,6 +18,10 @@ CFWLIBS= -lpspsystemctrl_user -lpspsysc_user
 LIBS = $(STDLIBS) $(CFWLIBS)
 LDFLAGS =
 
+ifdef DEBUG
+CFLAGS += -DDEBUG=$(DEBUG)
+endif
+
 EXTRA_TARGETS = EBOOT.PBP
 PSP_EBOOT_TITLE = Homebrew Sorter
 PSP_EBOOT_ICON = ICON0.PNG

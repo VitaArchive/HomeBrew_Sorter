@@ -5,6 +5,9 @@
 
 #include <oslib/oslib.h>
 
+#define _ADRENALINE_LOG_IMPL_
+#include <adrenaline_log.h>
+
 #include "media.h"
 #include "fileOperation.h"
 #include "isoreader.h"
@@ -21,7 +24,6 @@ enum HbSorterModes {
 };
 
 /* Globals: */
-static int g_running_flag = 1;
 static Homebrew g_hb_list[MAX_HB];
 static int g_hb_count = 0;
 static Categories g_cat_list[MAX_CAT];
@@ -559,13 +561,15 @@ static int initOSLib() {
 
 
 int main() {
+	logInit("ms0:/PSP/GAME/HBSORTER/log.txt");
+	logmsg("Homebrew Sorter started...\n");
+
 	initOSLib();
 	tzset();
 	g_hb_count = getHBList(g_hb_list, "All", 0);
 	g_cat_count = getCATList(g_cat_list);
 	g_cat_count_norep = checkCATList(g_cat_list, g_cat_list_norep);
 
-	// printf("ci arrivo?\n");
 	if (g_cat_count == 0) {
 		mainMenu();
 	} else {

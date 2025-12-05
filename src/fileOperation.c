@@ -7,6 +7,8 @@
 #include <pspsdk.h>
 #include <pspiofilemgr.h>
 
+#include <adrenaline_log.h>
+
 #include "fileOperation.h"
 
 static short int g_cat_found = 0;
@@ -290,11 +292,29 @@ int saveHBlist(Homebrew *HBlist, int HBcount) {
 	stat.st_mode = 0777;
 
 	for (i=HBcount - 1; i>=0; i--) {
+		logmsg4("[TRACE]: ScePspDateTime {year: %d, month: %d, day: %d, hour: %d, minute: %d, second: %d, microsec: %d }\n",
+			start.year,
+			start.month,
+			start.day,
+			start.hour,
+			start.minute,
+			start.second,
+			start.microsecond
+		);
 		stat.sce_st_mtime = start;
 		stat.sce_st_ctime = start;
-		sceIoChstat(HBlist[i].path, &stat, 0x1);
-		sceIoChstat(HBlist[i].path, &stat, 0x20);
-		sceIoChstat(HBlist[i].path, &stat, 0x8);
+		int res = sceIoChstat(HBlist[i].path, &stat, 0x1);
+		if (res < 0) {
+			logmsg("[ERROR]: Failed to modify mode: sceIoChstat(path = %s, bits = 0x01) -> 0x%08X\n", HBlist[i].path, res);
+		}
+		res = sceIoChstat(HBlist[i].path, &stat, 0x20);
+		if (res < 0) {
+			logmsg("[ERROR]: Failed to modify modified time: sceIoChstat(path = %s, bits = 0x20) -> 0x%08X\n", HBlist[i].path, res);
+		}
+		res = sceIoChstat(HBlist[i].path, &stat, 0x8);
+		if (res < 0) {
+			logmsg("[ERROR]: Failed to modify creation time: sceIoChstat(path = %s, bits = 0x08) -> 0x%08X\n", HBlist[i].path, res);
+		}
 		if (start.second < 50) {
 			start.second += 10;
 		} else {
@@ -338,9 +358,18 @@ int saveHBlistBM(Homebrew *HBlist, int HBcount) {
 		strcat(temp, "/eboot.pbp");
 		stat.sce_st_mtime = start;
 		stat.sce_st_ctime = start;
-		sceIoChstat(temp, &stat, 0x1);
-		sceIoChstat(temp, &stat, 0x20);
-		sceIoChstat(temp, &stat, 0x8);
+		int res = sceIoChstat(temp, &stat, 0x1);
+		if (res < 0) {
+			logmsg("[ERROR]: Failed to modify mode: sceIoChstat(path = %s, bits = 0x01) -> 0x%08X\n", temp, res);
+		}
+		res =  sceIoChstat(temp, &stat, 0x20);
+		if (res < 0) {
+			logmsg("[ERROR]: Failed to modify modified time: sceIoChstat(path = %s, bits = 0x20) -> 0x%08X\n", temp, res);
+		}
+		res = sceIoChstat(temp, &stat, 0x8);
+		if (res < 0) {
+			logmsg("[ERROR]: Failed to modify creation time: sceIoChstat(path = %s, bits = 0x08) -> 0x%08X\n", temp, res);
+		}
 		if (start.second < 50) {
 			start.second += 10;
 		} else {
@@ -398,9 +427,18 @@ int saveCATlist(Categories *CATlist, int CATcount) {
 	for (i=CATcount - 1; i>=0; i--) {
 		stat.sce_st_mtime = start;
 		stat.sce_st_ctime = start;
-		sceIoChstat(CATlist[i].path, &stat, 0x1);
-		sceIoChstat(CATlist[i].path, &stat, 0x20);
-		sceIoChstat(CATlist[i].path, &stat, 0x8);
+		int res = sceIoChstat(CATlist[i].path, &stat, 0x1);
+		if (res < 0) {
+			logmsg("[ERROR]: Failed to modify mode: sceIoChstat(path = %s, bits = 0x01) -> 0x%08X\n", CATlist[i].path, res);
+		}
+		res = sceIoChstat(CATlist[i].path, &stat, 0x20);
+		if (res < 0) {
+			logmsg("[ERROR]: Failed to modify modified time: sceIoChstat(path = %s, bits = 0x20) -> 0x%08X\n", CATlist[i].path, res);
+		}
+		res = sceIoChstat(CATlist[i].path, &stat, 0x8);
+		if (res < 0) {
+			logmsg("[ERROR]: Failed to modify creation time: sceIoChstat(path = %s, bits = 0x08) -> 0x%08X\n", CATlist[i].path, res);
+		}
 		if (start.second < 50) {
 			start.second += 10;
 		} else {
