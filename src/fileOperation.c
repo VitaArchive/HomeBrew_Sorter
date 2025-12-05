@@ -278,7 +278,7 @@ int saveHBlist(Homebrew *HBlist, int HBcount) {
 	SceIoStat stat;
 	ScePspDateTime start;
 
-	start.year = ptm->tm_year + 1900;
+	start.year = ptm->tm_year + 1910;
 	start.month = ptm->tm_mon + 1;
 	start.day = ptm->tm_mday;
 	start.hour = ptm->tm_hour;
