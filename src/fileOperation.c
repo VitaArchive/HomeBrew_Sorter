@@ -57,7 +57,7 @@ static int eboot_exists(char *path) {
 
 }
 
-static int check(Homebrew *HBlist, char* dir,int HBfound, int flag) {
+static int check(Title *HBlist, char* dir,int HBfound, int flag) {
 	static SceIoDirent oneDir;
 	char fullName[MAX_PATH];
 	SceIoStat stats;
@@ -131,7 +131,7 @@ static int check(Homebrew *HBlist, char* dir,int HBfound, int flag) {
 				strcpy(HBlist[HBfound].path, fullName);
 				HBlist[HBfound].dateModify = stats.sce_st_mtime;
 				sprintf(HBlist[HBfound].dateForSort, "%4.4i%2.2i%2.2i%2.2i%2.2i%2.2i%6.6i", stats.sce_st_mtime.year, stats.sce_st_mtime.month, stats.sce_st_mtime.day, stats.sce_st_mtime.hour, stats.sce_st_mtime.minute, stats.sce_st_mtime.second, stats.sce_st_mtime.microsecond);
-				HBlist[HBfound].type = HB_EBOOT;
+				HBlist[HBfound].type = TITLE_EBOOT;
 				strcpy(HBlist[HBfound].category, g_cur_cat);//this wouldn't work if there was a CAT_ dir inside a category...
 				HBfound++;
 			}
@@ -144,7 +144,7 @@ static int check(Homebrew *HBlist, char* dir,int HBfound, int flag) {
 				strcpy(HBlist[HBfound].path, fullName);
 				HBlist[HBfound].dateModify = stats.sce_st_mtime;
 				sprintf(HBlist[HBfound].dateForSort, "%4.4i%2.2i%2.2i%2.2i%2.2i%2.2i%6.6i", stats.sce_st_mtime.year, stats.sce_st_mtime.month, stats.sce_st_mtime.day, stats.sce_st_mtime.hour, stats.sce_st_mtime.minute, stats.sce_st_mtime.second, stats.sce_st_mtime.microsecond);
-				HBlist[HBfound].type = HB_ISO;
+				HBlist[HBfound].type = TITLE_ISO;
 				strcpy(HBlist[HBfound].category, g_cur_cat);//this wouldn't work if there was a CAT_ dir inside a category...
 				HBfound++;
 			}
@@ -171,7 +171,7 @@ int getCATList(Categories *CAT) {
 	return g_cat_found;
 }
 
-//Check for repeated categories and set the repeated flag to all repeated but the first one found
+// Check for repeated categories and set the repeated flag to all repeated but the first one found
 int checkCATList(Categories *CAT, Categories *CAT_norep) {
 	int i = 0;
 	int j = 0;
@@ -192,7 +192,7 @@ int checkCATList(Categories *CAT, Categories *CAT_norep) {
 		count++;
 	}
 
-	//make a list with only non-repeated categories
+	// Make a list with only non-repeated categories
 	j=0;
 	for (i = 0; i < g_cat_found; i++) {
 		if (!CAT[i].repeated) {
@@ -207,8 +207,8 @@ int checkCATList(Categories *CAT, Categories *CAT_norep) {
 //Flag: 1 to skip CAT_ folders, 0 to check them. Only used for the "Uncategorized" category
 //Category: may hold a "CAT_homebrew" like string or "All" for view all mode
 
-/* Get homebrew list: */
-int getHBList(Homebrew *HBlist, char *category, int flag) {
+/* Get a list of titles */
+int getTitlesList(Title *HBlist, char *category, int flag) {
 	int i;
 	int dirScanned = 0,
 	dirToScanNumber = 7,
@@ -242,7 +242,7 @@ int getHBList(Homebrew *HBlist, char *category, int flag) {
 			i++;
 
 		} else {
-			Homebrew tmp = HBlist[i];
+			Title tmp = HBlist[i];
 			HBlist[i] = HBlist[i-1];
 			HBlist[--i] = tmp;
 		}
@@ -251,9 +251,9 @@ int getHBList(Homebrew *HBlist, char *category, int flag) {
 }
 
 /* Move HB up: */
-int moveHBup(int index, Homebrew *HBlist) {
+int moveHBup(int index, Title *HBlist) {
 	if (index > 0) {
-		Homebrew tmp = HBlist[index];
+		Title tmp = HBlist[index];
 		HBlist[index] = HBlist[index - 1];
 		HBlist[index - 1] = tmp;
 	}
@@ -261,15 +261,15 @@ int moveHBup(int index, Homebrew *HBlist) {
 }
 
 /* Move HB down: */
-int moveHBdown(int index, Homebrew *HBlist) {
-	Homebrew tmp = HBlist[index];
+int moveHBdown(int index, Title *HBlist) {
+	Title tmp = HBlist[index];
 	HBlist[index] = HBlist[index + 1];
 	HBlist[index + 1] = tmp;
 	return 0;
 }
 
 /* Save HB list: */
-int saveHBlist(Homebrew *HBlist, int HBcount) {
+int saveTitlesList(Title *HBlist, int HBcount) {
 	int i = 0;
 
 	struct tm * ptm;
@@ -330,7 +330,8 @@ int saveHBlist(Homebrew *HBlist, int HBcount) {
 	return 0;
 }
 
-int saveHBlistBM(Homebrew *HBlist, int HBcount) {
+// Browser Mode
+int saveTitlesListBM(Title *HBlist, int HBcount) {
 	int i = 0;
 	char temp[262];
 

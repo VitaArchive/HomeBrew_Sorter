@@ -12,20 +12,20 @@
 #include "fileOperation.h"
 #include "isoreader.h"
 
-PSP_MODULE_INFO("HomebrewSorter", 0, 1, 0);
+PSP_MODULE_INFO("TitleSorter", 0, 1, 0);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
 PSP_HEAP_SIZE_KB(12*1024);
 
 #define ANALOG_SENS 40
 
 enum HbSorterModes {
-	MODE_HOMEBREW = 0,
+	MODE_TITLELIST = 0,
 	MODE_CATEGORIES = 1,
 };
 
 /* Globals: */
-static Homebrew g_hb_list[MAX_HB];
-static int g_hb_count = 0;
+static Title g_titles_list[MAX_HB];
+static int g_titles_count = 0;
 static Categories g_cat_list[MAX_CAT];
 static Categories g_cat_list_norep[MAX_CAT];
 static int g_cat_count = 0;
@@ -49,17 +49,17 @@ static char g_temp_name[262];
 
 /* Draw toolbars: */
 static char g_toolbars[100];
-static char g_hbfound[100];
+static char g_titlesfound[100];
 
 static void drawToolbars(int mode) {
 	oslDrawFillRect(0,0,480,15,RGBA(0,0,0,170));
-	oslDrawString(5,0,"HomeBrew Sorter");
+	oslDrawString(5,0,"Title Sorter");
 	if (!mode) {
-		sprintf(g_hbfound,"HomeBrews found: %i", g_hb_count);
+		sprintf(g_titlesfound,"Titles found: %i", g_titles_count);
 	} else {
-		sprintf(g_hbfound,"                       ");
+		sprintf(g_titlesfound,"                       ");
 	}
-	oslDrawString(195,0,g_hbfound);
+	oslDrawString(195,0,g_titlesfound);
 	//Current time:
 	struct tm * ptm;
 	time_t mytime;
@@ -156,11 +156,11 @@ static void getIcon0_fromiso(char* filename) {
 
 /*  Main menu: */
 static int mainMenu() {
-	int mode = MODE_HOMEBREW;
+	int mode = MODE_TITLELIST;
 	int skip = 0;
 	int start = 27;
 	int first = 0, catFirst =0, hbFirst =0;
-	int total = g_hb_count;
+	int total = g_titles_count;
 	int visible = 13;
 	int selected = 0;
 	int catSelected=0;
@@ -205,8 +205,8 @@ static int mainMenu() {
 			oslDrawImageXY(g_L,295,122);
 			oslDrawString(350, 122, "Change view");
 
-			if (mode == MODE_HOMEBREW) {
-				oslDrawString(355, 135, "HomeBrew");
+			if (mode == MODE_TITLELIST) {
+				oslDrawString(355, 135, "Title List");
 			} else if (mode ==1) {
 				oslDrawString(355, 135, "Categories");
 			}
@@ -224,10 +224,10 @@ static int mainMenu() {
 								oslDeleteImage(g_icon0);
 							}
 							oldSelected = selected;
-							if (g_hb_list[i].type == HB_EBOOT) {
-								getIcon0(g_hb_list[i].path);
-							} else if (g_hb_list[i].type == HB_ISO) {
-								getIcon0_fromiso(g_hb_list[i].path);
+							if (g_titles_list[i].type == TITLE_EBOOT) {
+								getIcon0(g_titles_list[i].path);
+							} else if (g_titles_list[i].type == TITLE_ISO) {
+								getIcon0_fromiso(g_titles_list[i].path);
 							}
 						}
 
@@ -255,18 +255,18 @@ static int mainMenu() {
 				}
 
 				if (i < total) {
-					if (mode == MODE_HOMEBREW) {
-						if (g_hb_list[i].type == HB_EBOOT) {
+					if (mode == MODE_TITLELIST) {
+						if (g_titles_list[i].type == TITLE_EBOOT) {
 							oslDrawImageXY(g_folder,12,start +(i - first)*oslGetImageHeight(g_folder));
 						} else {
 							oslDrawImageXY(g_iso,12,start +(i - first)*oslGetImageHeight(g_folder));
 						}
 
-						if (strcmp(g_hb_list[i].category, "Uncategorized") != 0) {
-							strcpy(g_temp_name, g_hb_list[i].category);
+						if (strcmp(g_titles_list[i].category, "Uncategorized") != 0) {
+							strcpy(g_temp_name, g_titles_list[i].category);
 							strcat(g_temp_name, ": ");
 						}
-						strcat(g_temp_name, g_hb_list[i].name);
+						strcat(g_temp_name, g_titles_list[i].name);
 						oslDrawString(15+oslGetImageWidth(g_folder),start +(i - first)*oslGetImageHeight(g_folder), g_temp_name);//HBlist[i].name);
 
 					} else if (mode == MODE_CATEGORIES) {
@@ -307,8 +307,8 @@ static int mainMenu() {
 					first++;
 				}
 
-			} else if (mode == MODE_HOMEBREW && selected < g_hb_count - 1) {
-				moveHBdown(selected, g_hb_list);
+			} else if (mode == MODE_TITLELIST && selected < g_titles_count - 1) {
+				moveHBdown(selected, g_titles_list);
 				if (++selected > first + visible) {
 					first++;
 				}
@@ -326,8 +326,8 @@ static int mainMenu() {
 					first--;
 				}
 
-			} else if (mode == MODE_HOMEBREW && selected > 0) {
-				moveHBup(selected, g_hb_list);
+			} else if (mode == MODE_TITLELIST && selected > 0) {
+				moveHBup(selected, g_titles_list);
 				if (--selected < first) {
 					first--;
 				}
@@ -346,7 +346,7 @@ static int mainMenu() {
 			enable ^= 1;
 
 		} else if (osl_keys->released.L || osl_keys->released.R) {
-			if (mode == MODE_HOMEBREW) {
+			if (mode == MODE_TITLELIST) {
 				mode = MODE_CATEGORIES;
 				hbSelected = selected;
 				selected = catSelected;
@@ -354,20 +354,20 @@ static int mainMenu() {
 				hbFirst = first;
 				first = catFirst;
 			} else if (mode == MODE_CATEGORIES) {
-				mode = MODE_HOMEBREW;
+				mode = MODE_TITLELIST;
 				catSelected = selected;
 				selected = hbSelected;
-				total = g_hb_count;
+				total = g_titles_count;
 				catFirst = first;
 				first = hbFirst;
 			}
 			oldSelected = -1;
 
 		} else if (osl_keys->released.start) {
-			if (mode == MODE_HOMEBREW) {
-				saveHBlist(g_hb_list, g_hb_count);
+			if (mode == MODE_TITLELIST) {
+				saveTitlesList(g_titles_list, g_titles_count);
 				if (g_is_browser_mode) {
-					saveHBlistBM(g_hb_list, g_hb_count);
+					saveTitlesListBM(g_titles_list, g_titles_count);
 				}
 
 			} else if (mode == MODE_CATEGORIES) {
@@ -489,12 +489,12 @@ static int priorMenu() {
 		} else if (osl_keys->released.cross) {
 			//If selected Uncategorized. Flag should only be 1 here
 			if (selected == 0) {
-				g_hb_count = getHBList(g_hb_list, "All", 1);
+				g_titles_count = getTitlesList(g_titles_list, "All", 1);
 			} else {
-				g_hb_count = getHBList(g_hb_list, g_cat_list_norep[selected-1].name, 0);
+				g_titles_count = getTitlesList(g_titles_list, g_cat_list_norep[selected-1].name, 0);
 			}
 			mainMenu();
-			g_hb_count = 0;
+			g_titles_count = 0;
 			oldSelected = -1;
 
 		} else if (osl_keys->released.circle) {
@@ -504,9 +504,9 @@ static int priorMenu() {
 			g_is_browser_mode ^= 1;
 
 		} else if (osl_keys->released.triangle) {
-			g_hb_count = getHBList(g_hb_list, "All", 0);
+			g_titles_count = getTitlesList(g_titles_list, "All", 0);
 			mainMenu();
-			g_hb_count = 0;
+			g_titles_count = 0;
 
 		} else if (osl_keys->released.start) {
 
@@ -561,19 +561,19 @@ static int initOSLib() {
 
 
 int main() {
-	logInit("ms0:/PSP/GAME/HBSORTER/log.txt");
-	logmsg("Homebrew Sorter started...\n");
+	logInit("ms0:/PSP/GAME/TITLESORTER/log.txt");
+	logmsg("Title Sorter started...\n");
 
 	initOSLib();
 	tzset();
-	g_hb_count = getHBList(g_hb_list, "All", 0);
+	g_titles_count = getTitlesList(g_titles_list, "All", 0);
 	g_cat_count = getCATList(g_cat_list);
 	g_cat_count_norep = checkCATList(g_cat_list, g_cat_list_norep);
 
 	if (g_cat_count == 0) {
 		mainMenu();
 	} else {
-		g_hb_count = 0;
+		g_titles_count = 0;
 		priorMenu();
 	}
 

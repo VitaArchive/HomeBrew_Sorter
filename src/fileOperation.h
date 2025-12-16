@@ -6,9 +6,9 @@
 // Max path size for full named thing
 #define MAX_PATH 256
 
-enum HomebrewType {
-	HB_EBOOT = 0,
-	HB_ISO = 1,
+enum TitleType {
+	TITLE_EBOOT = 0,
+	TITLE_ISO = 1,
 };
 
 typedef struct homebrew {
@@ -18,7 +18,7 @@ typedef struct homebrew {
     struct ScePspDateTime dateModify;
     char dateForSort[21];
 	short int type;
-} Homebrew;
+} Title;
 
 typedef struct categories {
 	char name[MAX_CAT_PATH];
@@ -28,11 +28,11 @@ typedef struct categories {
 	int repeated;//this stores if a category is repeated for merging it.
 } Categories;
 
-int getHBList(Homebrew *HBlist, char *category, int flag);
-int moveHBup(int index, Homebrew *HBlist);
-int moveHBdown(int index, Homebrew *HBlist);
-int saveHBlist(Homebrew *HBlist, int HBcount);
-int saveHBlistBM(Homebrew *HBlist, int HBcount);//For browser mode, modifies eboot.pbp
+int getTitlesList(Title *HBlist, char *category, int flag);
+int moveHBup(int index, Title *HBlist);
+int moveHBdown(int index, Title *HBlist);
+int saveTitlesList(Title *HBlist, int HBcount);
+int saveTitlesListBM(Title *HBlist, int HBcount);//For browser mode, modifies eboot.pbp
 
 int getCATList(Categories *CAT);
 int checkCATList(Categories *CAT, Categories *CAT_norep);
