@@ -71,7 +71,7 @@ Also, if you already sorted your homebrew and found it didn't work for Browser m
 
 ## Tested on
 
-- [Adrenaline eCFW](https://github.com/isage/Adrenaline) master branch (15/12/2025)
+- [Adrenaline eCFW](https://github.com/isage/Adrenaline) (Nightly)
 - [ARK-4 (e)CFW](https://github.com/PSP-Archive/ARK-4)
 - [ARK-5 (e)CFW](https://github.com/PSP-Arkfive/ARK-5)
 
